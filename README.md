@@ -24,7 +24,6 @@ Early planning stage. See [`docs/SPEC.md`](docs/SPEC.md) for the full product sp
 ```
 resume-optimizer/
 ├── README.md          # this file
-├── CLAUDE.md           # instructions for Claude Code when building this project
 ├── docs/
 │   └── SPEC.md          # full product spec
 ├── frontend/            # web app UI (to be scaffolded)
