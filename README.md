@@ -82,6 +82,7 @@ resume-optimizer/
 │   └── db.ts            # Prisma client singleton
 ├── prisma/
 │   └── schema.prisma    # full data model
+├── README.md          # this file
 ├── docs/
 │   ├── SPEC.md          # product spec
 │   └── ROADMAP.md       # build plan, decisions, cost model
