@@ -43,7 +43,8 @@ model Fact {
   /// null together with isCurrent = true means "Present"
   endDate       DateTime?
   isCurrent     Boolean   @default(false)
-  /// Projects carry a one-line description; experience entries do not.
+  /// A one-line descriptor rendered under the title. Projects use it for a
+  /// summary; education uses it for GPA. Experience entries leave it null.
   tagline       String?
   tags          String[]  @default([])
   /// Titles used for this same role on older resumes. Retained for reference
