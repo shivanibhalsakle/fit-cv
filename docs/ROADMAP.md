@@ -159,10 +159,20 @@ Delivered: `prisma/schema.prisma`, `lib/db.ts`, `lib/auth.ts`, `proxy.ts` (Next 
 
 *Known issue:* `npm audit` reports 3 high-severity advisories in `deepmerge-ts`, reached only through the Prisma **CLI** (`prisma` → `@prisma/config`). Dev-dependency only, not in the runtime bundle; no non-breaking fix is published yet. Recheck on the next Prisma release.
 
-### Phase 1 — Source of truth (manual)
-Corpus CRUD: add, edit, delete facts and bullets; tag them; attach metrics. Additive and editable forever — this is where work gets logged as it happens.
+### Phase 1 — Source of truth (manual) ✅ *complete 2026-09-06*
+Corpus CRUD: add, edit, delete facts and bullets; tag them; attach metrics; reorder bullets. Additive and editable forever — this is where work gets logged as it happens. No LLM involved.
 
-**Done when:** a fact can be created, edited, tagged, and retrieved. No LLM involved.
+Delivered: `lib/validation.ts` (Zod), `lib/dates.ts`, `lib/actions/corpus.ts`, `app/corpus/*`, `components/*`, `prisma/seed.ts`.
+
+**Seeded from `ShivaniB_Resume.pdf`** using the canonical values above — 13 facts, 18 bullets, 39 skills. Transcribed verbatim, no rewording; the other seven resumes arrive in Phase 2 through the merge queue where dedup and conflict review belong.
+
+Notes:
+- Metrics are newline-separated, tags comma-separated — resume metrics routinely contain commas (`"91.4%/90.0% ROC-AUC"`).
+- Dates are month-precision, normalised to UTC first-of-month so a date entered in one timezone renders as the same month everywhere.
+- Every server action re-checks the session. The proxy gates *pages*; server actions are independently addressable POST endpoints and need their own check.
+- Archived titles render struck-through on the fact page, clearly marked as never emitted.
+
+**Verified:** typecheck, lint, and production build clean; seed idempotent; list- and detail-page queries confirmed against the seeded data. **Not verified visually** — viewing the gated UI needs the GitHub OAuth credentials, which only the user can create.
 
 ### Phase 2 — Resume import (corpus bootstrap, and a permanent feature)
 Three input paths, all landing in the same **merge review queue**:
