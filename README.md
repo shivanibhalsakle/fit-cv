@@ -1,36 +1,94 @@
 # Resume Optimizer
 
-A web app that automates resume tailoring: store multiple resume variants, maintain a standing profile of preferences and experience, and generate a job-specific tailored resume from a company, role, and job description — with a before/after diff view showing exactly what changed.
+A web app that automates resume tailoring: maintain one source of truth for every piece of work you've done, keep several role-specific personas as views over it, and generate a job-specific tailored resume from a company, role, and job description — with a before/after diff showing exactly what changed.
 
 ## Why
 
-Manually rewriting resume bullets for every application (and every time a project or role updates) is slow and repetitive. This app removes that manual loop while keeping bullets sharp and specific to each job.
+Manually rewriting bullets for every application (and every time a project or role updates) is slow and repetitive. This removes that loop while keeping bullets specific and truthful.
 
 ## Status
 
-Early planning stage. See [`docs/SPEC.md`](docs/SPEC.md) for the full product spec.
+**Phase 0 complete** — scaffold, schema, database, auth. See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the full build plan and [`docs/SPEC.md`](docs/SPEC.md) for the product spec.
 
-## Planned Feature Set
+## Core concepts
 
-- **Resume variants** — save multiple resumes (e.g. TPM, Business Analyst, SWE) so you're never starting from scratch.
-- **Dashboard**
-  - *Customize Profile* — standing instructions/updates (new experience, tone preferences) that apply to all future resumes.
-  - *Customize Rules* — list of target roles and companies, stored for analysis.
-- **Tailor a Resume** — input company, role/job ID, job description, and optional one-off customization, then generate a tailored resume from one or more base variants.
-- **Diff view** — see the source resume(s) and the generated resume side by side, with removed lines in red and new/changed lines in yellow.
+- **Corpus** — the source of truth. Every fact and bullet you own, far more than fits on any one resume. Editable and additive forever.
+- **Persona** — a *view* over the corpus (Technical/SWE, Business Analyst, Strategy & Consulting, Project Management). A persona varies which bullets appear, how they're phrased, section order, skill grouping, and voice. It does **not** vary job titles, employers, or dates — those are immutable so resumes stay consistent with public profiles.
+- **Bullet variant** — every way an accomplishment has been phrased, whether imported from an old resume or generated for a specific application. Accepted generations write back, so the corpus gets richer with each application.
+- **Standing profile** vs **one-off customization** — the first persists across all future generations; the second is scoped to a single generation. Kept separate end to end.
+- **Generation** → **diff** → **archive** — every tailored resume is reviewable bullet by bullet, then saved with its JD and gap-fill Q&A for interview prep.
 
-## Repo Structure
+## Stack
+
+| | |
+|---|---|
+| App | Next.js 16 (App Router) + TypeScript + Tailwind 4 |
+| Database | PostgreSQL + Prisma |
+| Auth | Auth.js v5, GitHub OAuth locked to a single account |
+| LLM | Claude API (`claude-opus-5`) |
+| PDF | `@react-pdf/renderer` — preview and download from one component tree |
+| Hosting | Vercel + Neon (both free tier) |
+
+Resumes are stored as structured JSON, never as text blobs or PDFs. PDF is a render target generated on demand, which is what makes bullet-level diffing and page budgeting reliable.
+
+## Getting started
+
+**Prerequisites:** Node 22+, Docker Desktop (running), and a GitHub OAuth app.
+
+```bash
+npm install
+cp .env.example .env   # then fill in the values below
+npm run db:up          # start Postgres (requires Docker Desktop running)
+npm run db:push        # create tables
+npm run dev
+```
+
+Open http://localhost:3000.
+
+### Environment variables
+
+| Variable | How to get it |
+|---|---|
+| `DATABASE_URL` | Pre-filled for local Docker Postgres; no change needed |
+| `AUTH_SECRET` | `npx auth secret` |
+| `AUTH_GITHUB_ID` / `AUTH_GITHUB_SECRET` | [Create an OAuth app](https://github.com/settings/developers). Homepage `http://localhost:3000`, callback `http://localhost:3000/api/auth/callback/github` |
+| `ALLOWED_GITHUB_LOGIN` | Your GitHub username — the only account permitted to sign in |
+| `ANTHROPIC_API_KEY` | [console.anthropic.com](https://console.anthropic.com/settings/keys) (needed from Phase 2) |
+| `GITHUB_TOKEN` | Read-only PAT (needed from Phase 8) |
+
+`ALLOWED_GITHUB_LOGIN` **fails closed** — leaving it blank denies everyone rather than admitting any GitHub account.
+
+## Scripts
+
+| Command | Does |
+|---|---|
+| `npm run dev` | Dev server |
+| `npm run build` | Production build |
+| `npm run db:up` / `db:down` | Start / stop local Postgres |
+| `npm run db:push` | Sync schema to the database (no migration files) |
+| `npm run db:migrate` | Create and apply a migration |
+| `npm run db:studio` | Browse the database |
+| `npm run lint` | ESLint |
+
+## Repo structure
 
 ```
 resume-optimizer/
-├── README.md          # this file
-├── CLAUDE.md           # instructions for Claude Code when building this project
+├── app/                 # Next.js App Router — pages and API routes
+│   ├── api/auth/        # Auth.js handlers
+│   └── signin/
+├── lib/
+│   ├── auth.ts          # Auth.js config, single-user allowlist
+│   └── db.ts            # Prisma client singleton
+├── prisma/
+│   └── schema.prisma    # full data model
 ├── docs/
-│   └── SPEC.md          # full product spec
-├── frontend/            # web app UI (to be scaffolded)
-└── backend/             # API / resume generation logic (to be scaffolded)
+│   ├── SPEC.md          # product spec
+│   └── ROADMAP.md       # build plan, decisions, cost model
+├── docker-compose.yml   # local Postgres
+└── .env.example
 ```
 
-## Tech Stack
+## Security note
 
-Not yet decided — to be chosen during the build (see "Open Questions" in `docs/SPEC.md`).
+This app stores a complete personal work history. The repository is public; the data is not. `.env` is gitignored, the deployed app is gated to one GitHub account, and no resume content is ever committed.

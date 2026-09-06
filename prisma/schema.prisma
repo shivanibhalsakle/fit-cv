@@ -1,0 +1,376 @@
+// Resume Optimizer — data model
+// See docs/ROADMAP.md §2 for rationale.
+//
+// Two rules this schema enforces structurally:
+//   1. Job titles, employers, and dates live on Fact and are IMMUTABLE.
+//      Personas may not override them. (Resume titles must match public profiles.)
+//   2. Standing profile and one-off customization are separate columns on
+//      separate tables and never merge.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// CORPUS — the source of truth. Everything ever done, far beyond any one resume.
+// ---------------------------------------------------------------------------
+
+enum FactKind {
+  EXPERIENCE
+  PROJECT
+  EDUCATION
+  CERTIFICATION
+  AWARD
+  PUBLICATION
+  LEADERSHIP
+}
+
+model Fact {
+  id            String    @id @default(cuid())
+  kind          FactKind
+  /// IMMUTABLE — identical across every persona.
+  title         String
+  org           String?
+  /// e.g. "Regd. Indian NGO — Women & Children Rights". Optional flavour.
+  orgDescriptor String?
+  location      String?
+  startDate     DateTime?
+  /// null together with isCurrent = true means "Present"
+  endDate       DateTime?
+  isCurrent     Boolean   @default(false)
+  /// Projects carry a one-line description; experience entries do not.
+  tagline       String?
+  tags          String[]  @default([])
+  /// Titles used for this same role on older resumes. Retained for reference
+  /// only so out-of-date resumes in circulation can be recognised.
+  /// NEVER emitted into a generated resume.
+  archivedTitles String[] @default([])
+  sortHint      Int       @default(0)
+
+  bullets       Bullet[]
+  personaFacts  PersonaFact[]
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([kind])
+}
+
+model Bullet {
+  id            String   @id @default(cuid())
+  factId        String
+  fact          Fact     @relation(fields: [factId], references: [id], onDelete: Cascade)
+
+  /// The canonical phrasing. Variants hold every other way it has been written.
+  canonicalText String
+  /// Extracted figures ("91.4% ROC-AUC", "23 screens") — copied exactly, never invented.
+  metrics       String[] @default([])
+  tags          String[] @default([])
+  sortHint      Int      @default(0)
+
+  variants       BulletVariant[]
+  personaBullets PersonaBullet[]
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([factId])
+}
+
+enum VariantOrigin {
+  IMPORTED
+  GENERATED
+  MANUAL
+}
+
+/// Every way an accomplishment has ever been phrased — historical (from imported
+/// resumes) and generated (written back on each ACCEPTED tailoring run).
+/// Discarded generations must never land here.
+model BulletVariant {
+  id             String        @id @default(cuid())
+  bulletId       String
+  bullet         Bullet        @relation(fields: [bulletId], references: [id], onDelete: Cascade)
+
+  text           String
+  origin         VariantOrigin
+  styleTags      String[]      @default([])
+  timesReused    Int           @default(0)
+
+  // Provenance. Which of these is set depends on origin.
+  sourceResumeId String?
+  sourceResume   ImportedResume? @relation(fields: [sourceResumeId], references: [id], onDelete: SetNull)
+  generationId   String?
+  generation     Generation?     @relation(fields: [generationId], references: [id], onDelete: SetNull)
+  applicationId  String?
+  application    Application?    @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+  personaId      String?
+  persona        Persona?        @relation(fields: [personaId], references: [id], onDelete: SetNull)
+
+  createdAt      DateTime      @default(now())
+
+  @@index([bulletId])
+  @@index([personaId])
+  @@index([applicationId])
+}
+
+model Skill {
+  id      String   @id @default(cuid())
+  name    String   @unique
+  aliases String[] @default([])
+  tags    String[] @default([])
+
+  groupLinks SkillGroupItem[]
+}
+
+// ---------------------------------------------------------------------------
+// IDENTITY — single canonical contact block. One email for every persona.
+// ---------------------------------------------------------------------------
+
+model Contact {
+  id       String @id @default("singleton")
+  name     String
+  email    String
+  phone    String?
+  location String?
+  /// [{ label: "LinkedIn", url: "..." }, ...]
+  links    Json   @default("[]")
+
+  updatedAt DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// STANDING PROFILE — persists across ALL generations and ALL personas.
+// Deliberately separate from TailoringSession.oneOffInstructions.
+// ---------------------------------------------------------------------------
+
+model StandingProfile {
+  id                   String   @id @default("singleton")
+  /// Unstructured directives: "make my resume more technically oriented henceforth"
+  preferenceStatements Json     @default("[]")
+  /// Structured pending updates awaiting promotion into the corpus
+  pendingFacts         Json     @default("[]")
+  updatedAt            DateTime @updatedAt
+}
+
+model TargetRules {
+  id        String   @id @default("singleton")
+  roles     String[] @default([])
+  companies String[] @default([])
+  updatedAt DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// PERSONAS — views over the corpus. Four of them, one page each.
+// A persona may vary: inclusion, phrasing, section order/set, skill grouping, voice.
+// A persona may NOT vary: titles, employers, dates.
+// ---------------------------------------------------------------------------
+
+model Persona {
+  id            String   @id @default(cuid())
+  name          String   @unique
+  slug          String   @unique
+  /// Ordered section keys, e.g. ["education","skills","experience","projects"]
+  sectionOrder  String[] @default([])
+  /// Short prose describing how bullets should read for this persona.
+  voiceGuidance String?
+  /// Harvested from JDs collected for this persona. Powers zero-LLM gap analysis.
+  keywordVocab  String[] @default([])
+  /// Hard constraint. One page for all four personas.
+  pageBudget    Int      @default(1)
+  isSeeded      Boolean  @default(false)
+
+  facts       PersonaFact[]
+  bullets     PersonaBullet[]
+  skillGroups SkillGroup[]
+  variants    BulletVariant[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model PersonaFact {
+  id        String  @id @default(cuid())
+  personaId String
+  persona   Persona @relation(fields: [personaId], references: [id], onDelete: Cascade)
+  factId    String
+  fact      Fact    @relation(fields: [factId], references: [id], onDelete: Cascade)
+  sortHint  Int     @default(0)
+
+  @@unique([personaId, factId])
+  @@index([personaId])
+}
+
+model PersonaBullet {
+  id        String  @id @default(cuid())
+  personaId String
+  persona   Persona @relation(fields: [personaId], references: [id], onDelete: Cascade)
+  bulletId  String
+  bullet    Bullet  @relation(fields: [bulletId], references: [id], onDelete: Cascade)
+  sortHint  Int     @default(0)
+  emphasis  Int     @default(0)
+  /// Which variant this persona prefers, if not the canonical text.
+  preferredVariantId String?
+
+  @@unique([personaId, bulletId])
+  @@index([personaId])
+}
+
+/// Skill taxonomy is persona-scoped: the technical persona groups by
+/// "Languages / Tools & Platforms / Frameworks & Libraries / Domains";
+/// the BA persona by "Business Analysis / Data & Analytics / Tools / Technical".
+model SkillGroup {
+  id        String  @id @default(cuid())
+  personaId String
+  persona   Persona @relation(fields: [personaId], references: [id], onDelete: Cascade)
+  label     String
+  sortHint  Int     @default(0)
+
+  items     SkillGroupItem[]
+
+  @@unique([personaId, label])
+}
+
+model SkillGroupItem {
+  id           String     @id @default(cuid())
+  skillGroupId String
+  skillGroup   SkillGroup @relation(fields: [skillGroupId], references: [id], onDelete: Cascade)
+  skillId      String
+  skill        Skill      @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  sortHint     Int        @default(0)
+
+  @@unique([skillGroupId, skillId])
+}
+
+// ---------------------------------------------------------------------------
+// IMPORT — permanent feature, not one-time onboarding.
+// ---------------------------------------------------------------------------
+
+enum ImportStatus {
+  PENDING
+  REVIEWING
+  MERGED
+  DISCARDED
+}
+
+model ImportedResume {
+  id         String       @id @default(cuid())
+  filename   String?
+  /// Raw text from pdftotext -layout, or pasted directly.
+  rawText    String
+  /// Structured JSON from the parse call, before merge.
+  parsedJson Json?
+  status     ImportStatus @default(PENDING)
+  /// Values disagreeing with the canonical record, surfaced rather than applied.
+  conflicts  Json         @default("[]")
+  notes      String?
+
+  variants   BulletVariant[]
+
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// TAILORING — stateful: keyword extraction → gap analysis → Q&A → generate
+// ---------------------------------------------------------------------------
+
+enum SessionStatus {
+  DRAFT
+  ANALYZING
+  AWAITING_ANSWERS
+  GENERATING
+  COMPLETE
+  ABANDONED
+}
+
+model TailoringSession {
+  id                 String        @id @default(cuid())
+  /// One or more base personas may be blended.
+  personaIds         String[]      @default([])
+  company            String
+  role               String
+  jobId              String?
+  jdText             String
+  /// Scoped to THIS generation only. Never written to StandingProfile.
+  oneOffInstructions String?
+  extractedKeywords  String[]      @default([])
+  /// Keywords present in the JD but absent from the corpus — computed in code.
+  gapList            Json          @default("[]")
+  /// The gap-fill questions and the user's answers.
+  qaPairs            Json          @default("[]")
+  status             SessionStatus @default(DRAFT)
+
+  generations        Generation[]
+
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+}
+
+model Generation {
+  id               String           @id @default(cuid())
+  sessionId        String
+  session          TailoringSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sourcePersonaIds String[]         @default([])
+  /// The generated resume, structured. Renders to PDF; never stored as PDF.
+  outputJson       Json
+  /// Bullet-level diff against the source. Drives red/yellow highlighting.
+  diffJson         Json?
+  /// Only accepted generations write variants back to the corpus.
+  accepted         Boolean          @default(false)
+  acceptedAt       DateTime?
+  /// Bullets the model produced without a traceable source fact.
+  unsourcedFlags   Json             @default("[]")
+  /// Measured page count after render. One page is a hard constraint.
+  measuredPages    Float?
+
+  application      Application?
+  variants         BulletVariant[]
+
+  createdAt        DateTime         @default(now())
+
+  @@index([sessionId])
+}
+
+// ---------------------------------------------------------------------------
+// ARCHIVE — the interview-prep record.
+// ---------------------------------------------------------------------------
+
+enum ApplicationStatus {
+  SAVED
+  APPLIED
+  INTERVIEWING
+  REJECTED
+  OFFER
+  WITHDRAWN
+}
+
+model Application {
+  id             String            @id @default(cuid())
+  generationId   String            @unique
+  generation     Generation        @relation(fields: [generationId], references: [id], onDelete: Cascade)
+
+  company        String
+  role           String
+  jobId          String?
+  /// Frozen at save time — the JD as it was when applied to.
+  jdSnapshot     String
+  /// Frozen resume JSON, exactly what was sent.
+  resumeSnapshot Json
+  /// The gap-fill Q&A. How the experience was framed for this company.
+  qaSnapshot     Json              @default("[]")
+  status         ApplicationStatus @default(SAVED)
+  appliedAt      DateTime?
+  notes          String?
+
+  variants       BulletVariant[]
+
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@index([company])
+}
