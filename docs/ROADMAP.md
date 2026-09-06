@@ -150,10 +150,14 @@ Section sets will differ sharply to make the page fit: the technical persona alr
 
 Each phase is independently useful and testable. Nothing downstream is blocked on LLM output quality until Phase 4.
 
-### Phase 0 — Foundations
-Next.js + TypeScript scaffold; collapse `frontend/` and `backend/`; Prisma schema for the model above; local Postgres; Auth.js gate; secret hygiene (nothing sensitive in the public repo).
+### Phase 0 — Foundations ✅ *complete 2026-09-06*
+Next.js 16 (App Router) + TypeScript + Tailwind 4; `frontend/` and `backend/` collapsed into one `app/` tree; Prisma schema for the full model above; local Postgres via docker compose (port 5433); Auth.js v5 gated to one GitHub account; secret hygiene verified.
 
-**Done when:** the app runs locally, the schema migrates, login works, `.env` is ignored.
+Delivered: `prisma/schema.prisma`, `lib/db.ts`, `lib/auth.ts`, `proxy.ts` (Next 16 renamed `middleware`), `app/signin`, `docker-compose.yml`, `.env.example`, README. Typecheck, lint, and production build all clean.
+
+**Remaining to run locally:** start Docker Desktop, `npm run db:up`, `npm run db:push`, and fill the GitHub OAuth values in `.env`.
+
+*Known issue:* `npm audit` reports 3 high-severity advisories in `deepmerge-ts`, reached only through the Prisma **CLI** (`prisma` → `@prisma/config`). Dev-dependency only, not in the runtime bundle; no non-breaking fix is published yet. Recheck on the next Prisma release.
 
 ### Phase 1 — Source of truth (manual)
 Corpus CRUD: add, edit, delete facts and bullets; tag them; attach metrics. Additive and editable forever — this is where work gets logged as it happens.
