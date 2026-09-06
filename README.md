@@ -8,7 +8,9 @@ Manually rewriting bullets for every application (and every time a project or ro
 
 ## Status
 
-**Phase 0 complete** — scaffold, schema, database, auth. See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the full build plan and [`docs/SPEC.md`](docs/SPEC.md) for the product spec.
+**Phases 0–1 complete** — scaffold, schema, database, auth, and corpus CRUD. See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the full build plan and [`docs/SPEC.md`](docs/SPEC.md) for the product spec.
+
+Next: Phase 2, resume import (upload / paste → merge review queue).
 
 ## Core concepts
 
@@ -40,6 +42,7 @@ npm install
 cp .env.example .env   # then fill in the values below
 npm run db:up          # start Postgres (requires Docker Desktop running)
 npm run db:push        # create tables
+npm run db:seed        # optional — load a starting corpus
 npm run dev
 ```
 
@@ -67,6 +70,8 @@ Open http://localhost:3000.
 | `npm run db:up` / `db:down` | Start / stop local Postgres |
 | `npm run db:push` | Sync schema to the database (no migration files) |
 | `npm run db:migrate` | Create and apply a migration |
+| `npm run db:seed` | Load the starting corpus (idempotent — safe to re-run) |
+| `npm run db:reset` | Drop everything, recreate, re-seed |
 | `npm run db:studio` | Browse the database |
 | `npm run lint` | ESLint |
 
@@ -76,17 +81,24 @@ Open http://localhost:3000.
 resume-optimizer/
 ├── app/                 # Next.js App Router — pages and API routes
 │   ├── api/auth/        # Auth.js handlers
+│   ├── corpus/          # source-of-truth CRUD (list, new, [id])
 │   └── signin/
+├── components/          # form and UI pieces
 ├── lib/
+│   ├── actions/         # server actions
 │   ├── auth.ts          # Auth.js config, single-user allowlist
-│   └── db.ts            # Prisma client singleton
+│   ├── db.ts            # Prisma client singleton
+│   ├── dates.ts         # month-precision date handling
+│   └── validation.ts    # Zod schemas
 ├── prisma/
-│   └── schema.prisma    # full data model
-├── README.md          # this file
+│   ├── schema.prisma    # full data model
+│   └── seed.ts          # canonical contact + starting corpus
+├── README.md            # this file
 ├── docs/
 │   ├── SPEC.md          # product spec
 │   └── ROADMAP.md       # build plan, decisions, cost model
 ├── docker-compose.yml   # local Postgres
+├── proxy.ts             # route gate (Next 16's middleware)
 └── .env.example
 ```
 
