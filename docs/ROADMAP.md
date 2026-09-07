@@ -174,7 +174,7 @@ Notes:
 
 **Verified:** typecheck, lint, and production build clean; seed idempotent; list- and detail-page queries confirmed against the seeded data. **Not verified visually** — viewing the gated UI needs the GitHub OAuth credentials, which only the user can create.
 
-### Phase 2 — Resume import (corpus bootstrap, and a permanent feature)
+### Phase 2 — Resume import ✅ *complete 2026-09-06*
 Three input paths, all landing in the same **merge review queue**:
 
 1. **Upload** a PDF or DOCX — extracted with `pdftotext -layout` (deterministic, free; verified working on all 8 of the user's resumes)
@@ -191,7 +191,18 @@ The merge queue must **surface conflicts** rather than silently picking a winner
 
 Contact details are a single canonical block — email **sab10099@nyu.edu** for every persona. Other addresses appearing in older files (`bhalsakleshivani@gmail.com`, `shivani.bhalsakle@gmail.com`) are stale and are not imported.
 
-**Done when:** existing resumes are imported, the corpus holds real data, and every immutable field matches the canonical table. Roughly $0.06 per resume.
+**Measured cost: $0.097 per resume** (2-page BA resume — 3,880 in / 3,100 out on Opus 5 at effort `medium`). Above the $0.06 estimate; seven remaining resumes come to roughly $0.70.
+
+Implementation notes:
+- **`unpdf` replaced `pdftotext`.** The binary has no equivalent on the deploy target; `unpdf` is pure JS and extracts equivalently on single-column resumes. DOCX via `mammoth`.
+- **The planner proposes; it never decides.** Both fact matching *and* bullet disposition are overridable in the review UI. Lexical similarity cannot reliably distinguish a heavy rewrite of one accomplishment from a different one — the user's two Hotjar bullets describe the same work and score 23% — so any bullet can be attached as a phrasing of any existing bullet regardless of score.
+- **Scoring is kind-aware.** Experience and education with dates score on employer and date overlap (title is only 20%, since the same role is deliberately titled differently across files). Certifications, awards and projects score on title at 70% — they carry no dates and often no issuer.
+- Bullet variant threshold is 0.32, applied only *within* an already-matched fact. A missed variant becomes a near-duplicate the user can merge; a false variant would bury an unrelated accomplishment, which is the worse error.
+- `lib/claude.ts` supports org-level keys via an optional `ANTHROPIC_WORKSPACE_ID` header. Workspace-scoped keys need nothing.
+
+**Verified end to end** against `Resume for Business Analyst.pdf`: extraction, a real parse call, and merge planning against the seeded corpus. Bullets confirmed transcribed verbatim. Alhansat matched at 87% despite a completely different title; the SAKSHI entry that spans both split roles matched at 85% with the other role offered at 80%; contact email flagged as stale; 20 new skills identified.
+
+**Not verified visually** — the gated UI cannot be opened from this environment.
 
 *Placed early on purpose — everything downstream becomes testable against real content instead of fixtures. The corpus union is materially richer than any single file: the Believe Careers digital-marketing internship exists only in the archival CV and appears in none of the seven current resumes.*
 
@@ -269,7 +280,7 @@ The Claude API is the only real cost. Per million tokens: Opus 5 is $5 in / $25 
 
 | Operation | Estimate (Opus 5) |
 |---|---|
-| Import one resume | ~$0.06 |
+| Import one resume | ~$0.10 (measured) |
 | GitHub sync, ~20 repos (one time) | ~$0.65 |
 | Full tailoring session (~35k in / 8k out) | ~$0.38 |
 | Targeted single-bullet edit | ~$0.01 |

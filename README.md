@@ -10,7 +10,7 @@ Manually rewriting bullets for every application (and every time a project or ro
 
 **Phases 0–1 complete** — scaffold, schema, database, auth, and corpus CRUD. See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the full build plan and [`docs/SPEC.md`](docs/SPEC.md) for the product spec.
 
-Next: Phase 2, resume import (upload / paste → merge review queue).
+Next: Phase 3, personas and PDF rendering.
 
 ## Core concepts
 
