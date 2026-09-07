@@ -28,5 +28,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       const login = (profile?.login as string | undefined)?.toLowerCase();
       return login === allowedLogin;
     },
+
+    /**
+     * REQUIRED for the proxy to gate anything.
+     *
+     * `export default auth` as the proxy does not block unauthenticated
+     * requests on its own — next-auth defaults `authorized` to true and only
+     * consults this callback when it is defined. Without it the proxy attaches
+     * session info and lets every request through, which left every page in
+     * this app publicly readable.
+     */
+    authorized({ auth: session }) {
+      return Boolean(session?.user);
+    },
   },
 });

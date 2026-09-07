@@ -2,10 +2,13 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { NewPersonaForm } from "@/components/persona-forms";
 import { Tag } from "@/components/ui";
+import { requireUser } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
 export default async function PersonasPage() {
+  await requireUser();
+
   const personas = await prisma.persona.findMany({
     orderBy: { createdAt: "asc" },
     include: {

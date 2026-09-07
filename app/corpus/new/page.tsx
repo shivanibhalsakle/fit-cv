@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { FactForm } from "@/components/fact-form";
+import { requireUser } from "@/lib/session";
 
-export default function NewFactPage() {
+export default async function NewFactPage() {
+  await requireUser();
+
   return (
     <main className="mx-auto max-w-2xl px-6 py-12">
       <header className="mb-8">

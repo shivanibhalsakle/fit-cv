@@ -5,6 +5,7 @@ import type { MergePlan } from "@/lib/merge";
 import { MergeReview } from "@/components/merge-review";
 import { discardImport, parseImport } from "@/lib/actions/import";
 import { buttonClass, secondaryButtonClass } from "@/components/ui";
+import { requireUser } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,8 @@ export default async function ImportDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await requireUser();
+
   const { id } = await params;
   const record = await prisma.importedResume.findUnique({ where: { id } });
   if (!record) notFound();

@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { auth, signOut } from "@/lib/auth";
+import { requireUser } from "@/lib/session";
 import { prisma } from "@/lib/db";
 
 const PHASES = [
   { n: 1, name: "Source of truth", detail: "Corpus CRUD — facts, bullets, tags" }, // done
   { n: 2, name: "Resume import", detail: "Upload / paste / manual → merge queue" }, // done
   { n: 3, name: "Personas & rendering", detail: "Four personas, one-page PDF" }, // done
-  { n: 4, name: "Tailoring engine", detail: "JD → keywords → gaps → Q&A → generate" },
+  { n: 4, name: "Tailoring engine", detail: "JD → keywords → gaps → Q&A → generate" }, // done
   { n: 5, name: "Diff view", detail: "Bullet-level red/yellow + variant write-back" },
   { n: 6, name: "Editing surfaces", detail: "Direct, targeted, conversational" },
   { n: 7, name: "Archive & variant library", detail: "JD + resume + Q&A, traceable" },
@@ -14,6 +15,7 @@ const PHASES = [
 ];
 
 export default async function Home() {
+  await requireUser();
   const session = await auth();
 
   const [facts, bullets, personas] = await Promise.all([
@@ -67,6 +69,12 @@ export default async function Home() {
         >
           Personas →
         </Link>
+        <Link
+          href="/tailor"
+          className="inline-flex items-center rounded-md border border-neutral-300 px-3 py-1.5 text-sm font-medium transition-colors hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-900"
+        >
+          Tailor →
+        </Link>
       </nav>
 
       <section className="mb-12 grid grid-cols-3 gap-3">
@@ -90,7 +98,7 @@ export default async function Home() {
       <section>
         <h2 className="mb-1 text-sm font-medium">Build progress</h2>
         <p className="mb-4 text-xs text-neutral-500 dark:text-neutral-400">
-          Phases 0–3 complete — corpus, import, personas, one-page PDF.
+          Phases 0–4 complete — corpus, import, personas, PDF, tailoring.
         </p>
         <ol className="space-y-1.5">
           {PHASES.map((p) => (

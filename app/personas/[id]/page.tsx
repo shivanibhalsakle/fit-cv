@@ -9,6 +9,7 @@ import { PersonaActions } from "@/components/persona-forms";
 import { PersonaEditor, type EditorFact } from "@/components/persona-editor";
 import { EmphasisReview, type EmphasisRow } from "@/components/emphasis-review";
 import { inputClass, secondaryButtonClass } from "@/components/ui";
+import { requireUser } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,8 @@ export default async function PersonaPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await requireUser();
+
   const { id } = await params;
 
   const persona = await prisma.persona.findUnique({

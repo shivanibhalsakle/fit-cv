@@ -3,10 +3,13 @@ import { prisma } from "@/lib/db";
 import { formatRange } from "@/lib/dates";
 import { FACT_KINDS, FACT_KIND_LABELS } from "@/lib/validation";
 import { Tag, buttonClass } from "@/components/ui";
+import { requireUser } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
 export default async function CorpusPage() {
+  await requireUser();
+
   const facts = await prisma.fact.findMany({
     orderBy: [{ kind: "asc" }, { startDate: "desc" }, { sortHint: "asc" }],
     include: { _count: { select: { bullets: true } } },

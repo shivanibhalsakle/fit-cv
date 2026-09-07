@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { Prisma } from "@prisma/client";
-import { auth } from "@/lib/auth";
+import { requireUser } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import { ExtractError, extractText } from "@/lib/extract";
 import { MissingApiKeyError } from "@/lib/claude";
@@ -13,8 +13,10 @@ import { monthToDate } from "@/lib/dates";
 import type { ActionState } from "@/lib/validation";
 
 async function requireSession() {
-  const session = await auth();
-  if (!session?.user) throw new Error("Not authenticated");
+  // Redirects rather than throwing: a server action is an independently
+  // addressable POST endpoint, and an expired session should end at sign-in,
+  // not at a runtime error page.
+  await requireUser();
 }
 
 async function loadCorpus(): Promise<ExistingFact[]> {

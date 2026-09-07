@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { ImportForm } from "@/components/import-form";
 import { Tag } from "@/components/ui";
+import { requireUser } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +14,8 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 export default async function ImportPage() {
+  await requireUser();
+
   const imports = await prisma.importedResume.findMany({
     orderBy: { createdAt: "desc" },
   });

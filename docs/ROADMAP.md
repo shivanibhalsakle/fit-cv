@@ -232,10 +232,29 @@ Implementation notes:
 
 **Not verified visually in-app** — the gated preview cannot be opened from this environment; the rendered PDFs were sent to the user for review instead.
 
-### Phase 4 — Tailoring engine
+### Phase 4 — Tailoring engine ✅ *complete 2026-09-07*
 Paste a JD, extract keywords (hybrid: skills dictionary in code plus one cheap call for the rest), run **gap analysis in pure code** (set arithmetic, zero LLM), ask how to portray missing keywords, search the corpus for relevant unused bullets, generate a patch.
 
-**Done when:** a JD produces a tailored resume with every bullet traceable to a corpus fact.
+**Done when:** a JD produces a tailored resume with every bullet traceable to a corpus fact. ✅ Verified against a real Deloitte BA posting — fabrication audit passed, 0 guard flags.
+
+**No fabrication is enforced by the shape of the call, not by asking nicely.** The generation schema has no operation that creates a bullet from nothing: every operation names a `bulletId` that must already exist. Two guards run on the result — unknown ids are dropped, and any rewrite that introduces a number absent from the original is reverted to the original wording.
+
+**New material enters through the corpus, never around it.** A gap answer becomes a real corpus bullet attached to a fact the user picks, and only then can generation select it. Skipping a gap means that requirement is simply absent from the resume.
+
+**Coverage has four buckets, not two** — and the distinction is load-bearing:
+
+| Bucket | Meaning | Action |
+|---|---|---|
+| Evidenced | a bullet or credential on this resume shows it | none |
+| Have, not shown | evidenced in the corpus, not in this selection | generation pulls it in |
+| **Listed only** | named in the skills list, but no bullet or credential demonstrates it | asked as a question |
+| No evidence | nowhere at all | asked as a question |
+
+Two bugs found by testing and fixed: certifications were invisible to coverage (it read bullet text only, and a certification has no bullets, so ECBA was reported as a gap the user already held), and the skills list was being treated as evidence (Power BI showed "covered" while generation correctly refused to write a bullet for it — a listed skill is a claim, not evidence).
+
+**Measured cost per session: ~$0.23** — $0.013 to analyse (JD only; the corpus is never sent) and $0.216 to generate. Above the $0.38 whole-session estimate in §4 overall, but generation alone is 3x the $0.07 I projected, because a rationale per bullet across ~37 candidates is output-heavy and output bills at 5x input.
+
+*Known limitation:* keyword matching is lexical, so a bullet describing requirements gathering without using that phrase will not match it. The bias is deliberate — a false gap costs one extra question, a false "covered" silently drops a requirement.
 
 ### Phase 5 — Diff view
 Structured bullet-level diff. Before panel shows removed content in red; after panel shows new or reworded content in yellow. Multi-source attribution when blending personas. Accept, discard, regenerate.

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { auth } from "@/lib/auth";
+import { requireUser } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import { monthToDate } from "@/lib/dates";
 import {
@@ -18,8 +18,10 @@ import {
  * page that renders the form is not a gate on the action itself.
  */
 async function requireSession() {
-  const session = await auth();
-  if (!session?.user) throw new Error("Not authenticated");
+  // Redirects rather than throwing: a server action is an independently
+  // addressable POST endpoint, and an expired session should end at sign-in,
+  // not at a runtime error page.
+  await requireUser();
 }
 
 // --- Facts -----------------------------------------------------------------

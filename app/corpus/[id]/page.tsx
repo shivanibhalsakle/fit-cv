@@ -5,6 +5,7 @@ import { dateToMonth, formatRange } from "@/lib/dates";
 import { FactForm } from "@/components/fact-form";
 import { BulletEditor } from "@/components/bullet-editor";
 import { DeleteFact } from "@/components/delete-fact";
+import { requireUser } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +14,8 @@ export default async function FactPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await requireUser();
+
   const { id } = await params;
 
   const fact = await prisma.fact.findUnique({

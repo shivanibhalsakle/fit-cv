@@ -8,9 +8,9 @@ Manually rewriting bullets for every application (and every time a project or ro
 
 ## Status
 
-**Phases 0–3 complete** — scaffold, schema, database, auth, corpus CRUD, resume import, personas, and one-page PDF rendering. See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the full build plan and [`docs/SPEC.md`](docs/SPEC.md) for the product spec.
+**Phases 0–4 complete** — scaffold, schema, database, auth, corpus CRUD, resume import, personas, one-page PDF rendering, and the tailoring engine. See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the full build plan and [`docs/SPEC.md`](docs/SPEC.md) for the product spec.
 
-Next: Phase 4, the tailoring engine (JD → keywords → gap analysis → Q&A → generate).
+Next: Phase 5, the diff view (bullet-level red/yellow, accept/discard/regenerate).
 
 ## Core concepts
 
@@ -86,6 +86,7 @@ resume-optimizer/
 │   ├── api/personas/    # PDF and .tex render endpoints
 │   ├── import/          # upload / paste -> merge review queue
 │   ├── personas/        # persona list and editor with live preview
+│   ├── tailor/          # JD -> keywords -> gaps -> Q&A -> generate
 │   └── signin/
 ├── components/          # form and UI pieces
 ├── lib/
@@ -95,6 +96,8 @@ resume-optimizer/
 │   ├── claude.ts        # Anthropic client, model choice, cost estimate
 │   ├── dates.ts         # month-precision date handling
 │   ├── extract.ts       # PDF / DOCX -> text (free, deterministic)
+│   ├── generate.ts      # tailoring call; no-fabrication enforced by schema
+│   ├── keywords.ts      # JD keyword extraction + coverage (mostly free)
 │   ├── latex.ts         # resume doc -> .tex (no compiler bundled)
 │   ├── merge.ts         # matching, dedup, conflict detection (no LLM)
 │   ├── parse-resume.ts  # the single model call, structured outputs
