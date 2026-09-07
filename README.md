@@ -8,7 +8,7 @@ Manually rewriting bullets for every application (and every time a project or ro
 
 ## Status
 
-**Phases 0–1 complete** — scaffold, schema, database, auth, and corpus CRUD. See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the full build plan and [`docs/SPEC.md`](docs/SPEC.md) for the product spec.
+**Phases 0–2 complete** — scaffold, schema, database, auth, corpus CRUD, and resume import. See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the full build plan and [`docs/SPEC.md`](docs/SPEC.md) for the product spec.
 
 Next: Phase 3, personas and PDF rendering.
 
@@ -56,7 +56,8 @@ Open http://localhost:3000.
 | `AUTH_SECRET` | `npx auth secret` |
 | `AUTH_GITHUB_ID` / `AUTH_GITHUB_SECRET` | [Create an OAuth app](https://github.com/settings/developers). Homepage `http://localhost:3000`, callback `http://localhost:3000/api/auth/callback/github` |
 | `ALLOWED_GITHUB_LOGIN` | Your GitHub username — the only account permitted to sign in |
-| `ANTHROPIC_API_KEY` | [console.anthropic.com](https://console.anthropic.com/settings/keys) (needed from Phase 2) |
+| `ANTHROPIC_API_KEY` | [console.anthropic.com](https://console.anthropic.com/settings/keys). Prefer a key created *inside* a workspace, so spend limits apply |
+| `ANTHROPIC_WORKSPACE_ID` | Only needed if the key is org-level rather than workspace-scoped |
 | `GITHUB_TOKEN` | Read-only PAT (needed from Phase 8) |
 
 `ALLOWED_GITHUB_LOGIN` **fails closed** — leaving it blank denies everyone rather than admitting any GitHub account.
@@ -82,13 +83,18 @@ resume-optimizer/
 ├── app/                 # Next.js App Router — pages and API routes
 │   ├── api/auth/        # Auth.js handlers
 │   ├── corpus/          # source-of-truth CRUD (list, new, [id])
+│   ├── import/          # upload / paste -> merge review queue
 │   └── signin/
 ├── components/          # form and UI pieces
 ├── lib/
 │   ├── actions/         # server actions
 │   ├── auth.ts          # Auth.js config, single-user allowlist
 │   ├── db.ts            # Prisma client singleton
+│   ├── claude.ts        # Anthropic client, model choice, cost estimate
 │   ├── dates.ts         # month-precision date handling
+│   ├── extract.ts       # PDF / DOCX -> text (free, deterministic)
+│   ├── merge.ts         # matching, dedup, conflict detection (no LLM)
+│   ├── parse-resume.ts  # the single model call, structured outputs
 │   └── validation.ts    # Zod schemas
 ├── prisma/
 │   ├── schema.prisma    # full data model
