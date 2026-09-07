@@ -164,6 +164,14 @@ function rangesOverlap(
   return aStart <= bE && bStart <= aE;
 }
 
+/**
+ * Kinds whose identity is the employer and the period worked, not the title —
+ * the same job is deliberately titled differently across this user's resumes.
+ * Everything else (a certification, an award, a project) is identified by its
+ * name, and frequently carries no dates and no issuer at all.
+ */
+const ROLE_KINDS = new Set(["EXPERIENCE", "EDUCATION"]);
+
 function scoreFactMatch(parsed: ParsedFact, existing: ExistingFact): number {
   if (parsed.kind !== existing.kind) return 0;
 
@@ -171,11 +179,14 @@ function scoreFactMatch(parsed: ParsedFact, existing: ExistingFact): number {
     parsed.org && existing.org
       ? similarity(parsed.org, existing.org)
       : parsed.org || existing.org
-        ? 0
-        : 0.5; // both missing (e.g. personal projects) — neutral
+        ? // One side names an issuer and the other does not. Common for
+          // certifications listed as a bare run-on line; not evidence against.
+          0.5
+        : 0.5;
 
   const titleMatch = similarity(parsed.title, existing.title);
 
+  const hasDates = Boolean(parsed.startDate) && Boolean(existing.startDate);
   const dateMatch = rangesOverlap(
     parsed.startDate,
     parsed.isCurrent ? null : parsed.endDate,
@@ -185,9 +196,12 @@ function scoreFactMatch(parsed: ParsedFact, existing: ExistingFact): number {
     ? 1
     : 0;
 
-  // Org and dates identify a role far more reliably than the title does — the
-  // same job is deliberately titled differently across this user's resumes.
-  return orgMatch * 0.45 + dateMatch * 0.35 + titleMatch * 0.2;
+  if (ROLE_KINDS.has(parsed.kind) && hasDates) {
+    return orgMatch * 0.45 + dateMatch * 0.35 + titleMatch * 0.2;
+  }
+
+  // Undated, or not a role: the name carries the identity.
+  return titleMatch * 0.7 + orgMatch * 0.3;
 }
 
 export const FACT_MATCH_THRESHOLD = 0.5;
