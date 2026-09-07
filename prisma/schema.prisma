@@ -184,6 +184,13 @@ model Persona {
   /// Hard constraint. One page for all four personas.
   pageBudget    Int      @default(1)
   isSeeded      Boolean  @default(false)
+  /// When true, the renderer searches for the largest type scale that still
+  /// holds the page budget. When false, fontSize and lineHeight below are used
+  /// exactly as set, even if the result overflows — a manual override is a
+  /// deliberate choice and should not be silently corrected.
+  autofit       Boolean  @default(true)
+  fontSize      Float    @default(8.7)
+  lineHeight    Float    @default(1.24)
 
   facts       PersonaFact[]
   bullets     PersonaBullet[]
@@ -216,6 +223,14 @@ model PersonaBullet {
   emphasis  Int     @default(0)
   /// Which variant this persona prefers, if not the canonical text.
   preferredVariantId String?
+  /// Phrases rendered bold in this bullet. Stored as text, not character
+  /// offsets, so that editing the bullet elsewhere cannot silently shift the
+  /// emphasis onto the wrong words. Persona-scoped: a business resume
+  /// emphasises different words than a technical one.
+  boldPhrases        String[] @default([])
+  /// Model-suggested phrases awaiting approval. Never rendered until the user
+  /// promotes them into boldPhrases.
+  suggestedBold      String[] @default([])
 
   @@unique([personaId, bulletId])
   @@index([personaId])

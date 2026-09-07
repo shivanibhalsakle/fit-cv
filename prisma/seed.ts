@@ -348,12 +348,201 @@ async function main() {
     }
   }
 
+  const createdPersonas = await seedPersonas();
+
   console.log(
-    `Seed complete — ${createdFacts} facts, ${createdBullets} bullets, ${createdSkills} skills.`,
+    `Seed complete — ${createdFacts} facts, ${createdBullets} bullets, ${createdSkills} skills, ${createdPersonas} personas.`,
   );
   if (createdFacts === 0) {
     console.log("(Facts already present; nothing re-created.)");
   }
+}
+
+// ---------------------------------------------------------------------------
+// Personas — views over the corpus. One page each; titles never vary.
+// ---------------------------------------------------------------------------
+
+type SeedPersona = {
+  name: string;
+  slug: string;
+  sections: string[];
+  voice: string;
+  /** Fact titles to include, in render order. */
+  factTitles: string[];
+  /** Skill taxonomy for this persona — the grouping differs per persona. */
+  skillGroups: { label: string; skills: string[] }[];
+  /** Bullet tags to exclude, for personas that want a subset of a fact's bullets. */
+  dropBulletTags?: string[];
+};
+
+const EDU = [
+  "Master of Science, Management of Technology",
+  "Bachelor of Science, Computer Science, Honors Data Science",
+];
+const CERTS = [
+  "CAPM",
+  "ECBA",
+  "Google Project Management Professional Certificate",
+  "BCG Digital Transformation",
+];
+const JOBS = [
+  "Software Engineer Intern",
+  "Full Stack Developer Intern",
+  "Executive Web Developer",
+  "Developer Intern",
+];
+
+/**
+ * Three projects on every resume, always.
+ *
+ * The corpus currently holds exactly three, so every persona takes all of them,
+ * ordered by how well each fits that persona. Once the other resumes are
+ * imported there will be a wider pool (Booz Allen capstone, airline
+ * optimisation, attrition dashboard, pizzeria financials) and the
+ * business-facing personas should be re-pointed at the closer matches.
+ */
+const PROJECTS_TECHNICAL = ["Rel-AI Relocation Agent", "Vesper AI", "Surgical Copilot"];
+const PROJECTS_ANALYTICAL = ["Surgical Copilot", "Vesper AI", "Rel-AI Relocation Agent"];
+const PROJECTS_DELIVERY = ["Rel-AI Relocation Agent", "Surgical Copilot", "Vesper AI"];
+
+const PERSONAS: SeedPersona[] = [
+  {
+    name: "Technical / SWE",
+    slug: "technical-swe",
+    sections: ["education", "skills", "experience", "projects"],
+    voice:
+      "Lead with the technical mechanism. Name specific technologies. Quantify with system numbers (23 screens, 27-node graph, 10s cadence) rather than business outcomes.",
+    factTitles: [...EDU, ...JOBS, ...PROJECTS_TECHNICAL],
+    skillGroups: [
+      { label: "Languages", skills: ["Python", "SQL", "TypeScript", "Java", "Kotlin", "C#"] },
+      {
+        label: "Tools & Platforms",
+        skills: ["AWS", "Databricks", "Kafka", "Auth0", "Firebase", "PostgreSQL", "Redis", "Celery", "Docker", "GitHub Actions", "Swagger/OpenAPI"],
+      },
+      {
+        label: "Frameworks & Libraries",
+        skills: ["LangGraph", "Anthropic Claude SDK", "Spring Boot", "React Native (Expo)", "XGBoost", "Pydantic", "FastAPI", "Next.js", "ASP.NET Core", "Flutter", "Svelte", "Tailwind CSS"],
+      },
+      {
+        label: "Domains",
+        skills: ["Agentic AI / LLM Systems", "Machine Learning", "Full-Stack Development", "Mobile Development"],
+      },
+    ],
+  },
+  {
+    name: "Business Analyst",
+    slug: "business-analyst",
+    sections: ["education", "skills", "experience", "projects", "certifications"],
+    voice:
+      "Lead with the business outcome. Name the artifact produced (BRD, user story, process flow, requirements doc). Quantify in percentages and stakeholder counts. Avoid library and framework names.",
+    factTitles: [...EDU, ...JOBS, ...PROJECTS_ANALYTICAL, ...CERTS],
+    skillGroups: [
+      // Three groups, not four: a fourth line pushed this persona to two pages
+      // with three projects included. Editable in-app per persona.
+      {
+        label: "Business Analysis",
+        skills: ["Requirements Gathering", "Stakeholder Management", "Business Process Analysis", "Process Mapping", "Gap Analysis", "Root Cause Analysis"],
+      },
+      { label: "Data & Analytics", skills: ["SQL", "Python", "Tableau", "MS Power BI (Power Query, DAX)", "PostgreSQL"] },
+      { label: "Tools", skills: ["Swagger/OpenAPI", "GitHub Actions", "Docker", "Agile Methodology"] },
+    ],
+  },
+  {
+    name: "Strategy & Consulting",
+    slug: "strategy-consulting",
+    sections: ["education", "skills", "experience", "projects", "certifications"],
+    voice:
+      "Frame work as analysis feeding a decision. Emphasise scope, trade-offs, and recommendations over implementation detail. Keep technology named but subordinate to the business question.",
+    factTitles: [...EDU, ...JOBS, ...PROJECTS_ANALYTICAL, ...CERTS],
+    skillGroups: [
+      { label: "Business & Strategy", skills: ["Business Process Analysis", "Gap Analysis", "Root Cause Analysis", "Stakeholder Management"] },
+      { label: "Analytics & Visualization", skills: ["Python", "SQL", "Tableau", "MS Power BI (Power Query, DAX)"] },
+      { label: "Technical", skills: ["TypeScript", "PostgreSQL", "AWS", "Docker"] },
+    ],
+  },
+  {
+    // Greenfield — no source resume is built as a PM resume. Assembled from
+    // corpus material: the credential stack plus delivery-ownership bullets.
+    name: "Project Management",
+    slug: "project-management",
+    sections: ["education", "skills", "experience", "projects", "certifications"],
+    voice:
+      "Lead with ownership and delivery: what was run, at what scale, with whom, to what outcome. Foreground team size, phases, stakeholders and timelines. Keep technology as context, not as the subject.",
+    factTitles: [...EDU, ...JOBS, ...PROJECTS_DELIVERY, ...CERTS],
+    skillGroups: [
+      {
+        label: "Project & Program",
+        skills: ["Agile Methodology", "Stakeholder Management", "Process Mapping", "Requirements Gathering", "Gap Analysis"],
+      },
+      { label: "Tools", skills: ["Swagger/OpenAPI", "GitHub Actions", "Docker", "MS Power BI (Power Query, DAX)"] },
+      { label: "Technical", skills: ["Python", "SQL", "TypeScript", "AWS"] },
+    ],
+  },
+];
+
+async function seedPersonas(): Promise<number> {
+  let created = 0;
+
+  for (const p of PERSONAS) {
+    const exists = await prisma.persona.findFirst({
+      where: { OR: [{ name: p.name }, { slug: p.slug }] },
+      select: { id: true },
+    });
+    if (exists) continue;
+
+    const facts = await prisma.fact.findMany({
+      where: { title: { in: p.factTitles } },
+      include: { bullets: { orderBy: { sortHint: "asc" } } },
+    });
+
+    // Preserve the order given in factTitles.
+    const rank = new Map(p.factTitles.map((t, i) => [t, i]));
+    facts.sort((a, b) => (rank.get(a.title) ?? 99) - (rank.get(b.title) ?? 99));
+
+    const persona = await prisma.persona.create({
+      data: {
+        name: p.name,
+        slug: p.slug,
+        sectionOrder: p.sections,
+        voiceGuidance: p.voice,
+        pageBudget: 1,
+        isSeeded: true,
+        facts: {
+          create: facts.map((f, i) => ({ factId: f.id, sortHint: i })),
+        },
+        bullets: {
+          create: facts.flatMap((f) =>
+            f.bullets
+              .filter(
+                (b) =>
+                  !p.dropBulletTags?.some((t) => b.tags.includes(t)),
+              )
+              .map((b, i) => ({ bulletId: b.id, sortHint: i })),
+          ),
+        },
+      },
+    });
+
+    for (const [i, g] of p.skillGroups.entries()) {
+      const group = await prisma.skillGroup.create({
+        data: { personaId: persona.id, label: g.label, sortHint: i },
+      });
+      for (const [j, name] of g.skills.entries()) {
+        const skill = await prisma.skill.upsert({
+          where: { name },
+          update: {},
+          create: { name },
+        });
+        await prisma.skillGroupItem.create({
+          data: { skillGroupId: group.id, skillId: skill.id, sortHint: j },
+        });
+      }
+    }
+
+    created += 1;
+  }
+
+  return created;
 }
 
 main()

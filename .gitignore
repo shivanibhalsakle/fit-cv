@@ -40,4 +40,8 @@ __pycache__/
 
 # local agent instructions
 CLAUDE.md
-ROADMAP.md
+/ROADMAP.md
+
+# rendered samples
+out-*.pdf
+out-*.tex

@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db";
 const PHASES = [
   { n: 1, name: "Source of truth", detail: "Corpus CRUD — facts, bullets, tags" }, // done
   { n: 2, name: "Resume import", detail: "Upload / paste / manual → merge queue" }, // done
-  { n: 3, name: "Personas & rendering", detail: "Four personas, one-page PDF" },
+  { n: 3, name: "Personas & rendering", detail: "Four personas, one-page PDF" }, // done
   { n: 4, name: "Tailoring engine", detail: "JD → keywords → gaps → Q&A → generate" },
   { n: 5, name: "Diff view", detail: "Bullet-level red/yellow + variant write-back" },
   { n: 6, name: "Editing surfaces", detail: "Direct, targeted, conversational" },
@@ -61,6 +61,12 @@ export default async function Home() {
         >
           Import resumes →
         </Link>
+        <Link
+          href="/personas"
+          className="inline-flex items-center rounded-md border border-neutral-300 px-3 py-1.5 text-sm font-medium transition-colors hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-900"
+        >
+          Personas →
+        </Link>
       </nav>
 
       <section className="mb-12 grid grid-cols-3 gap-3">
@@ -84,7 +90,7 @@ export default async function Home() {
       <section>
         <h2 className="mb-1 text-sm font-medium">Build progress</h2>
         <p className="mb-4 text-xs text-neutral-500 dark:text-neutral-400">
-          Phases 0–2 complete — scaffold, auth, corpus CRUD, resume import.
+          Phases 0–3 complete — corpus, import, personas, one-page PDF.
         </p>
         <ol className="space-y-1.5">
           {PHASES.map((p) => (

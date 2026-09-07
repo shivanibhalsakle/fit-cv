@@ -8,9 +8,9 @@ Manually rewriting bullets for every application (and every time a project or ro
 
 ## Status
 
-**Phases 0–2 complete** — scaffold, schema, database, auth, corpus CRUD, and resume import. See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the full build plan and [`docs/SPEC.md`](docs/SPEC.md) for the product spec.
+**Phases 0–3 complete** — scaffold, schema, database, auth, corpus CRUD, resume import, personas, and one-page PDF rendering. See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the full build plan and [`docs/SPEC.md`](docs/SPEC.md) for the product spec.
 
-Next: Phase 3, personas and PDF rendering.
+Next: Phase 4, the tailoring engine (JD → keywords → gap analysis → Q&A → generate).
 
 ## Core concepts
 
@@ -83,7 +83,9 @@ resume-optimizer/
 ├── app/                 # Next.js App Router — pages and API routes
 │   ├── api/auth/        # Auth.js handlers
 │   ├── corpus/          # source-of-truth CRUD (list, new, [id])
+│   ├── api/personas/    # PDF and .tex render endpoints
 │   ├── import/          # upload / paste -> merge review queue
+│   ├── personas/        # persona list and editor with live preview
 │   └── signin/
 ├── components/          # form and UI pieces
 ├── lib/
@@ -93,8 +95,12 @@ resume-optimizer/
 │   ├── claude.ts        # Anthropic client, model choice, cost estimate
 │   ├── dates.ts         # month-precision date handling
 │   ├── extract.ts       # PDF / DOCX -> text (free, deterministic)
+│   ├── latex.ts         # resume doc -> .tex (no compiler bundled)
 │   ├── merge.ts         # matching, dedup, conflict detection (no LLM)
 │   ├── parse-resume.ts  # the single model call, structured outputs
+│   ├── render-pdf.ts    # render + measure page count off the real file
+│   ├── resume-doc.ts    # persona -> renderable structured document
+│   ├── resume-pdf.tsx   # the PDF template
 │   └── validation.ts    # Zod schemas
 ├── prisma/
 │   ├── schema.prisma    # full data model

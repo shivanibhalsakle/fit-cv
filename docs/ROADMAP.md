@@ -206,14 +206,31 @@ Implementation notes:
 
 *Placed early on purpose — everything downstream becomes testable against real content instead of fixtures. The corpus union is materially richer than any single file: the Believe Careers digital-marketing internship exists only in the archival CV and appears in none of the seven current resumes.*
 
-### Phase 3 — Personas and rendering
+### Phase 3 — Personas and rendering ✅ *complete 2026-09-06*
 Persona CRUD (create, rename, duplicate, delete) as selections over the corpus. React-PDF template replicating the current Word layout. Live preview, **page-fit meter** (load-bearing given the one-page rule), **Download PDF**, **Download .tex**.
 
 Seed all four personas: Technical/SWE, Business Analyst, and Strategy & Consulting derive from imported resumes; **Project Management is built from scratch** against the corpus material listed in §2.
 
-**Done when:** each of the four personas produces a downloadable one-page PDF matching the existing format.
+**All four personas render at one page.** Measured, not estimated.
 
-*First satisfying milestone: import resumes, see a real resume come back out.*
+| Persona | Entries | Bullets | Pages |
+|---|---|---|---|
+| Technical / SWE | 9 | 18 | 1 |
+| Business Analyst | 7 | 14 | 1 |
+| Strategy & Consulting | 8 | 16 | 1 |
+| Project Management | 7 | 14 | 1 |
+
+Implementation notes:
+- **The fit meter reads the page count off the rendered PDF** (via `unpdf` on the output buffer), never from a character-count estimate. With a hard one-page budget, a meter that says "fits" when it does not is worse than no meter.
+- **Preview is a server-rendered PDF in an iframe**, not a client-side renderer — `@react-pdf/renderer` in the browser is a heavy, SSR-hostile bundle, and an iframe shows the actual file rather than an approximation of it.
+- **Only built-in fonts (Helvetica).** Nothing is fetched at render time; a font download is a cold-start failure waiting to happen on serverless.
+- **Entry metadata is inline** — `Title – Org – Location` on one line with the date right-aligned, as on the source resume. Giving location its own line cost a line per entry and pushed the technical persona to two pages.
+- Certifications and awards render as one compact line rather than as entries with bullets; a one-page budget cannot afford a block each.
+- `.tex` export escapes `|`, `<`, `>` in addition to LaTeX's own specials — they are legal in text mode but render as the wrong glyph, and contact lines use pipes.
+
+**Project Management was built from scratch** as planned — no source resume is a PM resume. It leads with the credential stack (CAPM, ECBA, Google PM, BCG) and delivery-ownership material.
+
+**Not verified visually in-app** — the gated preview cannot be opened from this environment; the rendered PDFs were sent to the user for review instead.
 
 ### Phase 4 — Tailoring engine
 Paste a JD, extract keywords (hybrid: skills dictionary in code plus one cheap call for the rest), run **gap analysis in pure code** (set arithmetic, zero LLM), ask how to portray missing keywords, search the corpus for relevant unused bullets, generate a patch.
